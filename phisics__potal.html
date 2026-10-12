@@ -196,8 +196,7 @@ function lerpAngle(a,b,t){
 function addKeyframe(){
   const a = capturePortalState(portalA);
   const b = capturePortalState(portalB);
-  const t = keyframes.length === 0 ? 0 : 1; // we'll normalize by duration; t not used except order
-  keyframes.push({ a, b, t });
+  keyframes.push({ a, b });
   refreshKfList();
 }
 function refreshKfList(){
@@ -222,14 +221,12 @@ function evaluateKeyframes(tNorm){
   if (keyframes.length === 1) {
     return { a: keyframes[0].a, b: keyframes[0].b };
   }
-  // map tNorm [0,1] to segment
   const segCount = keyframes.length - 1;
   let segT = tNorm * segCount;
-  const idx = Math.floor(segT);
+  let idx = Math.floor(segT);
+  if (idx >= segCount) idx = segCount - 1;
   const local = segT - idx;
-  const k0 = keyframes[Math.max(0, Math.min(keyframes.length-1, idx))];
-  const k1 = keyframes[Math.max(0, Math.min(keyframes.length-1, idx+1))];
-  // interpolate portal A and B
+  const k0 = keyframes[idx], k1 = keyframes[idx + 1];
   const a = {
     x: lerp(k0.a.x, k1.a.x, local),
     y: lerp(k0.a.y, k1.a.y, local),
@@ -265,7 +262,9 @@ canvas.addEventListener('mousedown', e => {
     return;
   }
   if (currentMode === 'add_box'){
-    physicsBoxes.push({ x:m.x, y:m.y, width:32+Math.random()*56, height:20+Math.random()*48, vx:0, vy:0, angle: (Math.random()-0.5)*0.6, angular:0, cooldown:0, color:`hsl(${Math.random()*60+20},75%,45%)`, prevU:{a:1,b:1}, flash:0 });
+    physicsBoxes.push({ x:m.x, y:m.y, width:32+Math.random()*56, height:20+Math.random()*48, vx:0, vy:0, angle: (Math.random()-0.5)*0.6, angular:0, cooldown:0, color:`hsl(${Math.random()*60+20},85%,60%)`, prevU:{a:1,b:1}, flash:0 });
+    selectedBox = physicsBoxes[physicsBoxes.length - 1];
+    updateBoxControls();
     setMode('move');
     return;
   }
@@ -683,8 +682,8 @@ function update(dt){
   // collision passes
   for (let pass=0; pass<2; pass++){
     const participants = [];
-    for (const b of balls){ participants.push({isBox:false,isClone:false,parent:b,x:b.x,y:b.y,vx:b.vx,vy:b.vy,radius:b.radius}); const c = getCloneFrame(b,false); if (c) participants.push({isBox:false,isClone:true,parent:b,x:c.x,y:c.y,vx:c.vx,vy:c.vy,radius:c.radius,type:c.type}); }
-    for (const box of physicsBoxes){ participants.push({isBox:true,isClone:false,parent:box,x:box.x,y:box.y,vx:box.vx,vy:box.vy,width:box.width,height:box.height,angle:box.angle}); const c = getCloneFrame(box,true); if (c) participants.push({isBox:true,isClone:true,parent:box,x:c.x,y:c.y,vx:c.vx,vy:c.vy,width:c.width,height:c.height,angle:c.angle,type:c.type}); }
+    for (const b of balls){ participants.push({isBox:false,isClone:false,parent:b,x:b.x,y:b.y,vx:b.vx,vy:b.vy,radius:b.radius}); const c = getCloneFrame(b,false); if (c) participants.push({isBox:false,isClone:true,parent:c,x:c.x,y:c.y,vx:c.vx,vy:c.vy,radius:c.radius}); }
+    for (const box of physicsBoxes){ participants.push({isBox:true,isClone:false,parent:box,x:box.x,y:box.y,vx:box.vx,vy:box.vy,width:box.width,height:box.height,angle:box.angle}); const c = getCloneFrame(box,true); if (c) participants.push({isBox:true,isClone:true,parent:c,x:c.x,y:c.y,vx:c.vx,vy:c.vy,width:c.width,height:c.height,angle:c.angle}); }
 
     for (let i=0;i<participants.length;i++){
       for (let j=i+1;j<participants.length;j++){
@@ -882,10 +881,8 @@ function applyPortalClip(portal){
 /* ---------- main loop ---------- */
 
 let lastTime = performance.now();
-let kfPlaying = false;
 function frame(now){
   const dt = now - lastTime; lastTime = now;
-  if (kfPlaying){ kfTime += dt; const total = kfDurationSec*1000; if (kfTime > total){ if (kfLoop) kfTime %= total; else { kfPlaying=false; playKFBtn.textContent='Play'; kfTime = total; } } const tNorm = keyframes.length>0 ? Math.max(0, Math.min(1, kfTime / total)) : 0; const vals = evaluateKeyframes(tNorm); if (vals){ applyPortalState(portalA, vals.a); applyPortalState(portalB, vals.b); } }
   update(dt);
   draw();
   requestAnimationFrame(frame);
@@ -893,46 +890,9 @@ function frame(now){
 requestAnimationFrame(frame);
 
 // handle playback UI toggles and variables
-let kfPlayingState = false;
-let kfTime = 0;
-playKFBtn.addEventListener('click', ()=> {
-  kfPlaying = !kfPlaying;
-  kfPlaying ? (playKFBtn.textContent='Pause') : (playKFBtn.textContent='Play');
-});
 kfLoopBtn.addEventListener('click', ()=> { kfLoop = !kfLoop; kfLoopBtn.classList.toggle('active', kfLoop); });
 
 // expose a few helpers to ease keyframe editing (re-evaluate on add)
-function evaluateKeyframes(tNorm){
-  return evaluateKeyframesInternal(tNorm);
-}
-function evaluateKeyframesInternal(tNorm){
-  if (keyframes.length === 0) return null;
-  if (keyframes.length === 1){
-    return { a: keyframes[0].a, b: keyframes[0].b };
-  }
-  const segCount = keyframes.length - 1;
-  let segT = tNorm * segCount;
-  let idx = Math.floor(segT);
-  if (idx >= segCount) idx = segCount - 1;
-  const local = segT - idx;
-  const k0 = keyframes[idx], k1 = keyframes[idx+1];
-  const a = {
-    x: lerp(k0.a.x, k1.a.x, local),
-    y: lerp(k0.a.y, k1.a.y, local),
-    angle: lerpAngle(k0.a.angle, k1.a.angle, local),
-    length: lerp(k0.a.length, k1.a.length, local)
-  };
-  const b = {
-    x: lerp(k0.b.x, k1.b.x, local),
-    y: lerp(k0.b.y, k1.b.y, local),
-    angle: lerpAngle(k0.b.angle, k1.b.angle, local),
-    length: lerp(k0.b.length, k1.b.length, local)
-  };
-  return { a, b };
-}
-
-/* ---------- utility: keep UI variables and start state ---------- */
-
 gravityVal.textContent = gravitySlider.value;
 bounceVal.textContent = bounceSlider.value;
 frictionVal.textContent = frictionSlider.value;
