@@ -265,7 +265,7 @@ canvas.addEventListener('mousedown', e => {
     return;
   }
   if (currentMode === 'add_box'){
-    physicsBoxes.push({ x:m.x, y:m.y, width:32+Math.random()*56, height:20+Math.random()*48, vx:0, vy:0, angle: (Math.random()-0.5)*0.6, angular:0, cooldown:0, color:`hsl(${Math.random()*60+20},80%,55%)`, prevU:{a:1,b:1}, flash:0 });
+    physicsBoxes.push({ x:m.x, y:m.y, width:32+Math.random()*56, height:20+Math.random()*48, vx:0, vy:0, angle: (Math.random()-0.5)*0.6, angular:0, cooldown:0, color:`hsl(${Math.random()*60+20},80%,55%)` });
     selectedBox = physicsBoxes[physicsBoxes.length-1];
     updateBoxControls();
     setMode('move');
@@ -907,10 +907,8 @@ function applyPortalClip(portal){
 /* ---------- main loop ---------- */
 
 let lastTime = performance.now();
-let kfPlaying = false;
 function frame(now){
   const dt = now - lastTime; lastTime = now;
-  if (kfPlaying){ kfTime += dt; const total = kfDurationSec*1000; if (kfTime > total){ if (kfLoop) kfTime %= total; else { kfPlaying=false; playKFBtn.textContent='Play'; kfTime = total; } } const tNorm = Math.max(0, Math.min(1, kfTime / total)); const evalFrames = evaluateKeyframes(tNorm); if (evalFrames){ applyPortalState(portalA, evalFrames.a); applyPortalState(portalB, evalFrames.b); } }
   update(dt);
   draw();
   requestAnimationFrame(frame);
@@ -918,43 +916,7 @@ function frame(now){
 requestAnimationFrame(frame);
 
 // handle playback UI toggles and variables
-let kfPlayingState = false;
-let kfTime = 0;
-playKFBtn.addEventListener('click', ()=> {
-  kfPlaying = !kfPlaying;
-  kfPlaying ? (playKFBtn.textContent='Pause') : (playKFBtn.textContent='Play');
-});
 kfLoopBtn.addEventListener('click', ()=> { kfLoop = !kfLoop; kfLoopBtn.classList.toggle('active', kfLoop); });
-
-// expose a few helpers to ease keyframe editing (re-evaluate on add)
-function evaluateKeyframes(tNorm){
-  return evaluateKeyframesInternal(tNorm);
-}
-function evaluateKeyframesInternal(tNorm){
-  if (keyframes.length === 0) return null;
-  if (keyframes.length === 1){
-    return { a: keyframes[0].a, b: keyframes[0].b };
-  }
-  const segCount = keyframes.length - 1;
-  let segT = tNorm * segCount;
-  let idx = Math.floor(segT);
-  if (idx >= segCount) idx = segCount - 1;
-  const local = segT - idx;
-  const k0 = keyframes[idx], k1 = keyframes[idx+1];
-  const a = {
-    x: lerp(k0.a.x, k1.a.x, local),
-    y: lerp(k0.a.y, k1.a.y, local),
-    angle: lerpAngle(k0.a.angle, k1.a.angle, local),
-    length: lerp(k0.a.length, k1.a.length, local)
-  };
-  const b = {
-    x: lerp(k0.b.x, k1.b.x, local),
-    y: lerp(k0.b.y, k1.b.y, local),
-    angle: lerpAngle(k0.b.angle, k1.b.angle, local),
-    length: lerp(k0.b.length, k1.b.length, local)
-  };
-  return { a, b };
-}
 
 /* ---------- utility: keep UI variables and start state ---------- */
 
