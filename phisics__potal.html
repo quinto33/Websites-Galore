@@ -1,208 +1,169 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Portal Simulation — Animated Portals & Sweep Teleport</title>
-<style>
-  body{margin:0;background:#0f1115;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;box-sizing:border-box;}
-  .container{display:flex;gap:24px;width:100%;max-width:1150px;background:#181d28;padding:24px;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.6);border:1px solid #2d3748;}
-  .sim-view{flex:1}
-  canvas{background:#0b0d13;border-radius:12px;border:2px solid #2d3748;width:100%;aspect-ratio:800/500;display:block}
-  .dashboard{width:320px;background:#111520;border-radius:12px;padding:20px;border:1px solid #2d3748;display:flex;flex-direction:column;gap:12px;box-sizing:border-box}
-  .dashboard h2{margin:0;color:#fff;font-size:18px;border-bottom:2px solid #2d3748;padding-bottom:8px}
-  .controls{display:flex;gap:8px;align-items:center}
-  .btn{background:#2563eb;color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
-  .btn-danger{background:#dc2626}
-  .toggle-btn{background:#1e293b;border:1px solid #475569;color:#cbd5e1;padding:6px 10px;border-radius:6px;cursor:pointer}
-  input[type=range]{flex:1}
-  .row{display:flex;align-items:center;gap:8px}
-  label{color:#cbd5e1;min-width:80px}
-  .small{font-size:12px;color:#94a3b8}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Portal Simulation — Intrusion Toggle (Static Portals)</title>
+  <style>
+    body{margin:0;background:#0f1115;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;box-sizing:border-box;}
+    .container{display:flex;gap:24px;width:100%;max-width:1150px;background:#181d28;padding:24px;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.6);border:1px solid #2d3748;}
+    .sim-view{flex:1}
+    canvas{background:#0b0d13;border-radius:12px;border:2px solid #2d3748;width:100%;aspect-ratio:800/500;display:block}
+    .dashboard{width:320px;background:#111520;border-radius:12px;padding:20px;border:1px solid #2d3748;display:flex;flex-direction:column;gap:12px;box-sizing:border-box}
+    .dashboard h2{margin:0;color:#fff;font-size:18px;border-bottom:2px solid #2d3748;padding-bottom:8px}
+    .controls{display:flex;gap:8px;align-items:center}
+    .btn{background:#2563eb;color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
+    .btn-danger{background:#dc2626}
+    .toggle-btn{background:#1e293b;border:1px solid #475569;color:#cbd5e1;padding:6px 10px;border-radius:6px;cursor:pointer}
+    input[type=range]{flex:1}
+    .row{display:flex;align-items:center;gap:8px}
+    label{color:#cbd5e1;min-width:110px}
+    .small{font-size:12px;color:#94a3b8}
+  </style>
 </head>
 <body>
-<div class="container">
-  <div class="sim-view">
-    <div style="background:#111520;padding:12px;border-radius:8px;border-left:4px solid #10b981;margin-bottom:12px;color:#94a3b8">
-      💡 Animated portals: launch a portal at an object — when a portal sweeps over an object it will teleport and briefly blanch (flash white).
-    </div>
-    <canvas id="simCanvas" width="800" height="500"></canvas>
-  </div>
-
-  <div class="dashboard">
-    <h2>Simulation Controls</h2>
-
-    <div class="row">
-      <label>Gravity</label>
-      <input id="gravity" type="range" min="0" max="1" step="0.01" value="0.25">
-      <div class="small" id="gval">0.25</div>
+  <div class="container">
+    <div class="sim-view">
+      <div style="background:#111520;padding:12px;border-radius:8px;border-left:4px solid #10b981;margin-bottom:12px;color:#94a3b8">
+        🔧 Portals are static now. Use "Intrusion Rendering" to toggle the widening/warp effect when objects approach a portal.
+      </div>
+      <canvas id="simCanvas" width="800" height="500"></canvas>
     </div>
 
-    <div class="row">
-      <label>Bounce</label>
-      <input id="bounce" type="range" min="0.2" max="1.0" step="0.01" value="0.85">
-      <div class="small" id="bval">0.85</div>
-    </div>
+    <div class="dashboard">
+      <h2>Simulation Controls</h2>
 
-    <div class="row">
-      <label>Friction</label>
-      <input id="fric" type="range" min="0.9" max="1.0" step="0.001" value="0.995">
-      <div class="small" id="fval">0.995</div>
-    </div>
+      <div class="row">
+        <label>Gravity</label>
+        <input id="gravity" type="range" min="0" max="1" step="0.01" value="0.25">
+        <div class="small" id="gval">0.25</div>
+      </div>
 
-    <hr style="border:0;border-top:1px solid #2d3748;margin:6px 0">
+      <div class="row">
+        <label>Bounce</label>
+        <input id="bounce" type="range" min="0.2" max="1.0" step="0.01" value="0.85">
+        <div class="small" id="bval">0.85</div>
+      </div>
 
-    <div style="display:flex;gap:8px;align-items:center;">
-      <button id="launchA" class="btn">Launch A</button>
-      <button id="launchB" class="btn">Launch B</button>
-      <div style="flex:1"></div>
-      <button id="reset" class="btn btn-danger">Reset</button>
-    </div>
+      <div class="row">
+        <label>Friction</label>
+        <input id="fric" type="range" min="0.9" max="1.0" step="0.001" value="0.995">
+        <div class="small" id="fval">0.995</div>
+      </div>
 
-    <div class="row" style="margin-top:8px">
-      <label>Launch Speed</label>
-      <input id="launchSpeed" type="range" min="2" max="26" step="1" value="10">
-      <div class="small" id="ls">10</div>
-    </div>
+      <div style="margin-top:6px; display:flex; gap:8px; align-items:center;">
+        <button id="intrusionToggle" class="toggle-btn active">Intrusion Rendering: On</button>
+        <button id="clear" class="btn" style="margin-left:auto">Clear Scene</button>
+      </div>
 
-    <div style="margin-top:8px" class="small">Tip: Click "Launch" to fling a portal (it will move/rotate). Drop balls (Add Ball mode), then launch a portal into them.</div>
+      <div style="margin-top:8px" class="small">Mode: <button id="modeAddBall" class="toggle-btn">Add Ball</button> <button id="modeAddBox" class="toggle-btn">Add Box</button> <button id="modeMove" class="toggle-btn">Move</button></div>
 
-    <div style="margin-top:12px;display:flex;gap:8px;">
-      <button id="modeAddBall" class="toggle-btn">Add Ball</button>
-      <button id="modeAddBox" class="toggle-btn">Add Physics Box</button>
-      <button id="modeMove" class="toggle-btn">Move</button>
-    </div>
-
-    <div style="margin-top:6px;display:flex;gap:8px;">
-      <button id="clear" class="btn">Clear Scene</button>
+      <div style="margin-top:8px; color:#94a3b8; font-size:13px">Tip: Click canvas to add balls/boxes in the chosen mode; drag objects in Move mode. Teleport happens when objects cross a portal plane.</div>
     </div>
   </div>
-</div>
 
 <script>
-/* ---------- Simulation with animated portals and sweep-teleport + blanch effect ---------- */
+/* Static portals + intrusion toggle version.
+   - Portals no longer animate or move.
+   - Intrusion (widening) rendering can be toggled.
+   - Physics and teleportation preserved.
+*/
 
 const canvas = document.getElementById('simCanvas');
 const ctx = canvas.getContext('2d');
 
-const cfg = {
-  gravity: 0.25,
-  bounce: 0.85,
-  friction: 0.995
-};
-
+const cfg = { gravity: 0.25, bounce: 0.85, friction: 0.995 };
 document.getElementById('gravity').addEventListener('input', e => { cfg.gravity = +e.target.value; document.getElementById('gval').textContent = cfg.gravity; });
 document.getElementById('bounce').addEventListener('input', e => { cfg.bounce = +e.target.value; document.getElementById('bval').textContent = cfg.bounce; });
 document.getElementById('fric').addEventListener('input', e => { cfg.friction = +e.target.value; document.getElementById('fval').textContent = cfg.friction; });
 
+// intrusion toggle (controls whether warp is applied to portal rendering)
+let intrusionEnabled = true;
+const intrusionToggle = document.getElementById('intrusionToggle');
+intrusionToggle.addEventListener('click', () => {
+  intrusionEnabled = !intrusionEnabled;
+  intrusionToggle.classList.toggle('active', intrusionEnabled);
+  intrusionToggle.textContent = `Intrusion Rendering: ${intrusionEnabled ? 'On' : 'Off'}`;
+});
+
+// mode buttons
 let mode = 'add_ball';
-document.getElementById('modeAddBall').classList.add('active');
-document.getElementById('modeAddBall').addEventListener('click', ()=> setMode('add_ball'));
-document.getElementById('modeAddBox').addEventListener('click', ()=> setMode('add_box'));
-document.getElementById('modeMove').addEventListener('click', ()=> setMode('move'));
+const modeAddBall = document.getElementById('modeAddBall');
+const modeAddBox = document.getElementById('modeAddBox');
+const modeMove = document.getElementById('modeMove');
+function setMode(m){ mode = m; modeAddBall.classList.toggle('active', m==='add_ball'); modeAddBox.classList.toggle('active', m==='add_box'); modeMove.classList.toggle('active', m==='move'); }
+modeAddBall.addEventListener('click', ()=> setMode('add_ball'));
+modeAddBox.addEventListener('click', ()=> setMode('add_box'));
+modeMove.addEventListener('click', ()=> setMode('move'));
+setMode('add_ball');
+
 document.getElementById('clear').addEventListener('click', ()=> { balls = []; physicsBoxes = []; obstacleBoxes = []; });
 
-function setMode(m){
-  mode = m;
-  ['modeAddBall','modeAddBox','modeMove'].forEach(id => document.getElementById(id).classList.toggle('active', id === (m==='add_ball'?'modeAddBall':m==='add_box'?'modeAddBox':'modeMove')));
-}
-
+// scene objects
 let balls = [
   { x:200, y:120, vx:3, vy:1, radius:16, color:'#00ffff', cooldown:0, prevU:{a:1,b:1}, flash:0 }
 ];
-
 let physicsBoxes = [
   { x:380, y:150, width:35, height:35, vx:-2, vy:0, cooldown:0, color:'#f59e0b', prevU:{a:1,b:1}, flash:0 }
 ];
-
 let obstacleBoxes = [
   { x:400, y:380, width:160, height:30, color:'#475569' }
 ];
 
-// portals with velocity & rotation
-const portalA = { x:250,y:440,angle:-Math.PI/2,length:120,color:'#00aaff', id:'a', vx:0, vy:0, angular:0, damping:0.985, _warp:0, _prev:null };
-const portalB = { x:580,y:200,angle:Math.PI,length:120,color:'#ff8800', id:'b', vx:0, vy:0, angular:0, damping:0.985, _warp:0, _prev:null };
+// static portals (no vx/vy/animation)
+const portalA = { x:250, y:440, angle:-Math.PI/2, length:120, color:'#00aaff', id:'a', _warp:0 };
+const portalB = { x:580, y:200, angle:Math.PI, length:120, color:'#ff8800', id:'b', _warp:0 };
 portalA.target = portalB; portalB.target = portalA;
 
-document.getElementById('launchA').addEventListener('click', ()=> launchPortal(portalA));
-document.getElementById('launchB').addEventListener('click', ()=> launchPortal(portalB));
-document.getElementById('launchSpeed').addEventListener('input', e => document.getElementById('ls').textContent = e.target.value);
-document.getElementById('reset').addEventListener('click', resetScene);
-
-function launchPortal(p){
-  const speed = +document.getElementById('launchSpeed').value;
-  // launch towards pointer if available, otherwise downward
-  p.vx += (Math.random()*2-1) * (speed*0.22);
-  p.vy += Math.abs(Math.cos(Date.now()*0.001))*0.3 + speed * 0.6; // a downward push
-  p.angular += (Math.random()-0.5) * 0.25;
-}
-
-function resetScene(){
-  portalA.x = portalA.baseX = 250; portalA.y = portalA.baseY = 440; portalA.angle = portalA.baseAngle = -Math.PI/2; portalA.length = 120; portalA.vx=portalA.vy=portalA.angular=0;
-  portalB.x = portalB.baseX = 580; portalB.y = portalB.baseY = 200; portalB.angle = portalB.baseAngle = Math.PI; portalB.length = 120; portalB.vx=portalB.vy=portalB.angular=0;
-  balls = []; physicsBoxes = []; obstacleBoxes = [{ x:400, y:380, width:160, height:30, color:'#475569' }];
-}
-
-// mouse interactions for adding objects & moving
-let dragMode = null, dragged=null, lastMouse={x:0,y:0}, selectedBox=null, boxOffset={x:0,y:0};
+// mouse / interaction
+let dragMode = null, dragged = null, lastMouse = {x:0,y:0}, selectedBox=null, boxOffset={x:0,y:0};
 canvas.addEventListener('mousedown', e => {
-  const m = screenToCanvas(e);
-  lastMouse = m;
-  if (mode === 'add_ball'){ balls.push({ x:m.x,y:m.y,vx:(Math.random()-0.5)*10,vy:(Math.random()-0.4)*6,radius:10+Math.random()*14,color:`hsl(${Math.random()*360},90%,60%)`,cooldown:0,prevU:{a:1,b:1},flash:0 }); return; }
-  if (mode === 'add_box'){ physicsBoxes.push({ x:m.x,y:m.y,width:30+Math.random()*60,height:20+Math.random()*60,vx:0,vy:0,cooldown:0,color:`hsl(${Math.random()*60+20},80%,48%)`,prevU:{a:1,b:1},flash:0 }); setMode('move'); return; }
+  const m = screenToCanvas(e); lastMouse = m;
+  if (mode === 'add_ball'){ balls.push({ x:m.x, y:m.y, vx:(Math.random()-0.5)*10, vy:(Math.random()-0.4)*6, radius:10+Math.random()*14, color:`hsl(${Math.random()*360},90%,60%)`, cooldown:0, prevU:{a:1,b:1}, flash:0 }); return; }
+  if (mode === 'add_box'){ physicsBoxes.push({ x:m.x, y:m.y, width:30+Math.random()*60, height:20+Math.random()*60, vx:0, vy:0, cooldown:0, color:`hsl(${Math.random()*60+20},80%,48%)`, prevU:{a:1,b:1}, flash:0 }); setMode('move'); return; }
   if (mode === 'move'){
-    // try select box
-    for (let i=physicsBoxes.length-1;i>=0;i--){
+    for (let i = physicsBoxes.length-1; i >= 0; i--){
       const b = physicsBoxes[i];
-      if (m.x >= b.x-b.width/2 && m.x <= b.x+b.width/2 && m.y >= b.y-b.height/2 && m.y <= b.y+b.height/2){
-        selectedBox = b; dragMode='box_move'; boxOffset = { x:m.x - b.x, y:m.y - b.y }; return;
+      if (m.x >= b.x - b.width/2 && m.x <= b.x + b.width/2 && m.y >= b.y - b.height/2 && m.y <= b.y + b.height/2){
+        selectedBox = b; dragMode = 'box_move'; boxOffset = {x: m.x - b.x, y: m.y - b.y}; return;
       }
     }
-    // select ball
-    for (let i=balls.length-1;i>=0;i--){
+    for (let i = balls.length-1; i >= 0; i--){
       const b = balls[i];
-      if (Math.hypot(m.x-b.x,m.y-b.y) < b.radius){ dragged = b; dragMode = 'ball_drag'; b.vx=0; b.vy=0; return; }
+      if (Math.hypot(m.x - b.x, m.y - b.y) < b.radius){ dragged = b; dragMode = 'ball_drag'; b.vx = 0; b.vy = 0; return; }
     }
   }
 });
 window.addEventListener('mousemove', e => {
   const m = screenToCanvas(e);
   if (!dragMode) return;
-  if (dragMode === 'ball_drag' && dragged){ dragged.x = m.x; dragged.y = m.y; dragged.vx = (m.x - lastMouse.x)*0.75; dragged.vy = (m.y - lastMouse.y)*0.75; }
-  if (dragMode === 'box_move' && selectedBox){ selectedBox.x = m.x - boxOffset.x; selectedBox.y = m.y - boxOffset.y; selectedBox.vx = (m.x - lastMouse.x)*0.75; selectedBox.vy = (m.y - lastMouse.y)*0.75; }
+  if (dragMode === 'ball_drag' && dragged){ dragged.x = m.x; dragged.y = m.y; dragged.vx = (m.x - lastMouse.x) * 0.75; dragged.vy = (m.y - lastMouse.y) * 0.75; }
+  if (dragMode === 'box_move' && selectedBox){ selectedBox.x = m.x - boxOffset.x; selectedBox.y = m.y - boxOffset.y; selectedBox.vx = (m.x - lastMouse.x) * 0.75; selectedBox.vy = (m.y - lastMouse.y) * 0.75; }
   lastMouse = m;
 });
-window.addEventListener('mouseup', e => { if (dragMode === 'ball_drag' && dragged){ limitSpeed(dragged,22); dragged.cooldown=0; } if (dragMode === 'box_move' && selectedBox){ limitSpeed(selectedBox,22); selectedBox.cooldown = 0; } dragMode=null; dragged=null; selectedBox=null; });
+window.addEventListener('mouseup', e => {
+  if (dragMode === 'ball_drag' && dragged){ limitSpeed(dragged,22); dragged.cooldown = 0; }
+  if (dragMode === 'box_move' && selectedBox){ limitSpeed(selectedBox,22); selectedBox.cooldown = 0; }
+  dragMode = null; dragged = null; selectedBox = null;
+});
 
-// utility
-function screenToCanvas(e){
-  const r = canvas.getBoundingClientRect();
-  return { x:(e.clientX - r.left) * (canvas.width / r.width), y:(e.clientY - r.top) * (canvas.height / r.height) };
-}
-function limitSpeed(obj, max){
-  const n = Math.hypot(obj.vx||0, obj.vy||0);
-  if (n > max){ obj.vx = (obj.vx / n) * max; obj.vy = (obj.vy / n) * max; }
-}
+function screenToCanvas(e){ const r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) * (canvas.width / r.width), y: (e.clientY - r.top) * (canvas.height / r.height) }; }
+function limitSpeed(obj, max){ const n = Math.hypot(obj.vx||0, obj.vy||0); if (n > max){ obj.vx = (obj.vx / n) * max; obj.vy = (obj.vy / n) * max; } }
 
-/* ---------- Transform helpers for sweep detection ---------- */
+/* ---------- local coords & warp (intrusion) ---------- */
 
 function getLocalCoordsWithTransform(entity, px, py, pangle){
   const dx = entity.x - px, dy = entity.y - py;
-  return {
-    u: dx*Math.cos(pangle) + dy*Math.sin(pangle),
-    v: -dx*Math.sin(pangle) + dy*Math.cos(pangle)
-  };
+  return { u: dx*Math.cos(pangle) + dy*Math.sin(pangle), v: -dx*Math.sin(pangle) + dy*Math.cos(pangle) };
 }
 function getLocalCoordinates(entity, portal){
   return getLocalCoordsWithTransform(entity, portal.x, portal.y, portal.angle);
 }
 
-/* ---------- Portal intrusion warp (visual widening) ---------- */
-
+// compute warp only if intrusionEnabled
 function computePortalWarp(portal){
-  const threshold = 140;
-  const maxWarp = 0.9;
+  if (!intrusionEnabled){ portal._warp = 0; return 0; }
+  const threshold = 140, maxWarp = 0.9;
   let best = 0;
   function consider(e, size){
     const loc = getLocalCoordinates(e, portal);
@@ -219,7 +180,7 @@ function computePortalWarp(portal){
   return portal._warp;
 }
 
-/* ---------- Teleportation logic: handles object crossing and portal sweep crossing ---------- */
+/* ---------- teleport logic (object crossing only — portals static) ---------- */
 
 function executeTeleport(entity, src, dest, isBox=false){
   const dTheta = dest.angle - src.angle + Math.PI;
@@ -244,72 +205,39 @@ function executeTeleport(entity, src, dest, isBox=false){
   entity.x += Math.cos(dest.angle) * (pad + 3);
   entity.y += Math.sin(dest.angle) * (pad + 3);
   entity.cooldown = 8;
-  // visual blanch / flash
   entity.flash = 1.0;
-  // if selected or dragged, cancel that
-  if (dragged === entity) { dragged = null; dragMode = null; }
-  if (selectedBox === entity) { selectedBox = null; dragMode = null; }
 }
 
-// This function checks both: object crossing and portal sweep (portal moved across object)
 function processInterception(entity, isBox=false){
-  // current local coords
   const coordsA = getLocalCoordinates(entity, portalA);
   const coordsB = getLocalCoordinates(entity, portalB);
   const size = isBox ? Math.max(entity.width, entity.height)/2 : (entity.radius || 0);
-  // previous entity u-values (for object movement detection)
-  const prevUA = (entity.prevU && typeof entity.prevU.a==='number') ? entity.prevU.a : coordsA.u;
-  const prevUB = (entity.prevU && typeof entity.prevU.b==='number') ? entity.prevU.b : coordsB.u;
+  const prevUA = (entity.prevU && typeof entity.prevU.a === 'number') ? entity.prevU.a : coordsA.u;
+  const prevUB = (entity.prevU && typeof entity.prevU.b === 'number') ? entity.prevU.b : coordsB.u;
 
-  // also compute portal-prev local coords to detect portal sweep:
-  const prevA = portalA._prev || {x:portalA.x,y:portalA.y,angle:portalA.angle};
-  const prevB = portalB._prev || {x:portalB.x,y:portalB.y,angle:portalB.angle};
-  const coordsA_prev = getLocalCoordsWithTransform(entity, prevA.x, prevA.y, prevA.angle);
-  const coordsB_prev = getLocalCoordsWithTransform(entity, prevB.x, prevB.y, prevB.angle);
-  const prevPortalUA = coordsA_prev.u;
-  const prevPortalUB = coordsB_prev.u;
-
-  // only attempt teleport if not cooling down
   if ((entity.cooldown || 0) <= 0){
-    // 1) object crossed portal A plane (prevUA > 0 && coordsA.u <= 0) -> A -> B
     if (Math.abs(coordsA.v) <= portalA.length/2 && Math.abs(coordsA.u) <= size && prevUA > 0 && coordsA.u <= 0){
       executeTeleport(entity, portalA, portalB, isBox);
-      if (!entity.prevU) entity.prevU = {a:coordsA.u, b:coordsB.u}; else { entity.prevU.a = coordsA.u; entity.prevU.b = coordsB.u; }
+      if (!entity.prevU) entity.prevU = {a: coordsA.u, b: coordsB.u}; else { entity.prevU.a = coordsA.u; entity.prevU.b = coordsB.u; }
       return;
     }
-    // 2) object crossed portal B plane -> B -> A
     if (Math.abs(coordsB.v) <= portalB.length/2 && Math.abs(coordsB.u) <= size && prevUB > 0 && coordsB.u <= 0){
       executeTeleport(entity, portalB, portalA, isBox);
-      if (!entity.prevU) entity.prevU = {a:coordsA.u, b:coordsB.u}; else { entity.prevU.a = coordsA.u; entity.prevU.b = coordsB.u; }
-      return;
-    }
-
-    // 3) portal A swept across object: prevPortalUA > 0 && coordsA.u <= 0 -> teleport A->B
-    if (Math.abs(coordsA.v) <= portalA.length/2 && Math.abs(coordsA.u) <= size && prevPortalUA > 0 && coordsA.u <= 0){
-      executeTeleport(entity, portalA, portalB, isBox);
-      if (!entity.prevU) entity.prevU = {a:coordsA.u, b:coordsB.u}; else { entity.prevU.a = coordsA.u; entity.prevU.b = coordsB.u; }
-      return;
-    }
-    // 4) portal B swept across object: prevPortalUB > 0 && coordsB.u <= 0 -> teleport B->A
-    if (Math.abs(coordsB.v) <= portalB.length/2 && Math.abs(coordsB.u) <= size && prevPortalUB > 0 && coordsB.u <= 0){
-      executeTeleport(entity, portalB, portalA, isBox);
-      if (!entity.prevU) entity.prevU = {a:coordsA.u, b:coordsB.u}; else { entity.prevU.a = coordsA.u; entity.prevU.b = coordsB.u; }
+      if (!entity.prevU) entity.prevU = {a: coordsA.u, b: coordsB.u}; else { entity.prevU.a = coordsA.u; entity.prevU.b = coordsB.u; }
       return;
     }
   }
-
-  // store entity prevU for next frame (object movement detection)
   if (!entity.prevU) entity.prevU = { a: coordsA.u, b: coordsB.u };
   else { entity.prevU.a = coordsA.u; entity.prevU.b = coordsB.u; }
 }
 
-/* ---------- Collisions (same stable physics from previous fixes) ---------- */
+/* ---------- collisions (stable, same as before) ---------- */
 
 function resolveBallBallCollision(p1, p2){
   const dx = p2.x - p1.x, dy = p2.y - p1.y;
-  const dist = Math.hypot(dx,dy), minD = p1.radius + p2.radius;
-  if (dist >= minD || dist===0) return;
-  const nx = dx/dist, ny = dy/dist; const overlap = (minD - dist)/2;
+  const dist = Math.hypot(dx, dy), minD = p1.radius + p2.radius;
+  if (dist >= minD || dist === 0) return;
+  const nx = dx/dist, ny = dy/dist; const overlap = (minD - dist) / 2;
   const velProj = (p2.vx - p1.vx)*nx + (p2.vy - p1.vy)*ny;
   if (velProj < 0){
     const m1 = p1.radius*p1.radius, m2 = p2.radius*p2.radius;
@@ -317,8 +245,8 @@ function resolveBallBallCollision(p1, p2){
     applyCollisionFeedback(p1, -nx*overlap, -ny*overlap, -nx*imp/m1, -ny*imp/m1);
     applyCollisionFeedback(p2, nx*overlap, ny*overlap, nx*imp/m2, ny*imp/m2);
   } else {
-    applyCollisionFeedback(p1, -nx*overlap, -ny*overlap, 0,0);
-    applyCollisionFeedback(p2, nx*overlap, ny*overlap, 0,0);
+    applyCollisionFeedback(p1, -nx*overlap, -ny*overlap, 0, 0);
+    applyCollisionFeedback(p2, nx*overlap, ny*overlap, 0, 0);
   }
 }
 
@@ -331,29 +259,27 @@ function resolveBallBoxCollision(ball, box){
   if (dist < ball.radius){
     let nx=0, ny=0, overlap=0;
     if (dist === 0){
-      const dl = ball.x - (box.x-halfW), dr=(box.x+halfW)-ball.x, dt=ball.y-(box.y-halfH), db=(box.y+halfH)-ball.y;
+      const dl = ball.x - (box.x-halfW), dr = (box.x+halfW)-ball.x, dt = ball.y - (box.y-halfH), db = (box.y+halfH)-ball.y;
       const mn = Math.min(dl,dr,dt,db);
-      if (mn===dl){ nx=-1; overlap = dl + ball.radius; }
-      else if (mn===dr){ nx=1; overlap = dr + ball.radius; }
-      else if (mn===dt){ ny=-1; overlap = dt + ball.radius; }
-      else { ny=1; overlap = db + ball.radius; }
+      if (mn === dl){ nx = -1; overlap = dl + ball.radius; }
+      else if (mn === dr){ nx = 1; overlap = dr + ball.radius; }
+      else if (mn === dt){ ny = -1; overlap = dt + ball.radius; }
+      else { ny = 1; overlap = db + ball.radius; }
     } else { nx = dx/dist; ny = dy/dist; overlap = ball.radius - dist; }
-    const boxVx = box.isStatic ? 0 : box.vx, boxVy = box.isStatic?0:box.vy;
+    const boxVx = box.isStatic?0:box.vx, boxVy = box.isStatic?0:box.vy;
     const rvx = ball.vx - boxVx, rvy = ball.vy - boxVy;
     const velDot = rvx*nx + rvy*ny;
     if (velDot < 0){
-      if (box.isStatic){
-        const imp = -(1 + cfg.bounce) * velDot;
-        applyCollisionFeedback(ball, nx*overlap, ny*overlap, nx*imp, ny*imp);
-      } else {
+      if (box.isStatic){ const imp = -(1 + cfg.bounce) * velDot; applyCollisionFeedback(ball, nx*overlap, ny*overlap, nx*imp, ny*imp); }
+      else {
         const m1 = ball.radius*ball.radius, m2 = box.width*box.height;
-        const imp = -(1+cfg.bounce)*velDot / (1/m1 + 1/m2);
+        const imp = -(1 + cfg.bounce) * velDot / (1/m1 + 1/m2);
         applyCollisionFeedback(ball, nx*overlap*0.5, ny*overlap*0.5, nx*imp/m1, ny*imp/m1);
         applyCollisionFeedback(box, -nx*overlap*0.5, -ny*overlap*0.5, -nx*imp/m2, -ny*imp/m2);
       }
     } else {
-      if (box.isStatic) applyCollisionFeedback(ball, nx*overlap, ny*overlap, 0,0);
-      else { applyCollisionFeedback(ball, nx*overlap*0.5, ny*overlap*0.5, 0,0); applyCollisionFeedback(box, -nx*overlap*0.5, -ny*overlap*0.5, 0,0); }
+      if (box.isStatic) applyCollisionFeedback(ball, nx*overlap, ny*overlap, 0, 0);
+      else { applyCollisionFeedback(ball, nx*overlap*0.5, ny*overlap*0.5, 0, 0); applyCollisionFeedback(box, -nx*overlap*0.5, -ny*overlap*0.5, 0, 0); }
     }
   }
 }
@@ -385,11 +311,8 @@ function applyCollisionFeedback(participant, dpx, dpy, dvx, dvy){
   participant.x += dpx; participant.y += dpy;
   participant.vx = (participant.vx||0) + dvx; participant.vy = (participant.vy||0) + dvy;
   if (!participant.parent) return;
-  if (!participant.isClone){
-    participant.parent.x += dpx; participant.parent.y += dpy;
-    participant.parent.vx = (participant.parent.vx||0) + dvx; participant.parent.vy = (participant.parent.vy||0) + dvy;
-  } else {
-    // map clone impulse back to parent through transform
+  if (!participant.isClone){ participant.parent.x += dpx; participant.parent.y += dpy; participant.parent.vx = (participant.parent.vx||0) + dvx; participant.parent.vy = (participant.parent.vy||0) + dvy; }
+  else {
     const scaleFactor = (participant.type==='b') ? (portalB.length/portalA.length) : (portalA.length/portalB.length);
     const dTheta = (participant.type==='b') ? (portalB.angle - portalA.angle + Math.PI) : (portalA.angle - portalB.angle + Math.PI);
     const invTheta = -dTheta;
@@ -401,95 +324,7 @@ function applyCollisionFeedback(participant, dpx, dpy, dvx, dvy){
   }
 }
 
-/* ---------- Update loop ---------- */
-
-function update(){
-  // store portal previous transforms for sweep detection
-  portalA._prev = { x: portalA.x, y: portalA.y, angle: portalA.angle };
-  portalB._prev = { x: portalB.x, y: portalB.y, angle: portalB.angle };
-
-  // motor / animated movement for portals (apply velocities & damping)
-  [portalA, portalB].forEach(p => {
-    p.x += p.vx;
-    p.y += p.vy;
-    p.angle += p.angular;
-    // bounce off walls
-    if (p.x < 10) { p.x = 10; p.vx *= -0.5; }
-    if (p.x > canvas.width-10) { p.x = canvas.width-10; p.vx *= -0.5; }
-    if (p.y < 10) { p.y = 10; p.vy *= -0.5; }
-    if (p.y > canvas.height-10) { p.y = canvas.height-10; p.vy *= -0.5; }
-    p.vx *= p.damping; p.vy *= p.damping; p.angular *= p.damping;
-  });
-
-  // compute visual warps
-  computePortalWarp(portalA);
-  computePortalWarp(portalB);
-
-  // physics for balls
-  for (let b of balls){
-    if (b === dragged && dragMode === 'ball_drag') { processInterception(b,false); continue; }
-    if (b.cooldown > 0) b.cooldown--;
-    b.vy += cfg.gravity;
-    b.vx *= cfg.friction; b.vy *= cfg.friction;
-    b.x += b.vx; b.y += b.vy;
-    processInterception(b,false);
-
-    // flash decay
-    if (b.flash) b.flash = Math.max(0, b.flash - 0.08);
-
-    // boundaries (skip if portal bypass)
-    if (b.y + b.radius > canvas.height && !checkBoundaryBypass(b, b.x, canvas.height, b.radius)){ b.y = canvas.height - b.radius; b.vy *= -cfg.bounce; }
-    if (b.y - b.radius < 0 && !checkBoundaryBypass(b, b.x, 0, b.radius)){ b.y = b.radius; b.vy *= -cfg.bounce; }
-    if (b.x + b.radius > canvas.width && !checkBoundaryBypass(b, canvas.width, b.y, b.radius)){ b.x = canvas.width - b.radius; b.vx *= -cfg.bounce; }
-    if (b.x - b.radius < 0 && !checkBoundaryBypass(b, 0, b.y, b.radius)){ b.x = b.radius; b.vx *= -cfg.bounce; }
-  }
-
-  // physics for boxes
-  for (let box of physicsBoxes){
-    if (box === selectedBox && dragMode === 'box_move') { processInterception(box,true); continue; }
-    if (box.cooldown > 0) box.cooldown--;
-    box.vy += cfg.gravity;
-    box.vx *= cfg.friction; box.vy *= cfg.friction;
-    box.x += box.vx; box.y += box.vy;
-    processInterception(box,true);
-
-    if (box.flash) box.flash = Math.max(0, box.flash - 0.08);
-
-    const size = Math.max(box.width, box.height)/2;
-    if (box.y + box.height/2 > canvas.height && !checkBoundaryBypass(box, box.x, canvas.height, size)){ box.y = canvas.height - box.height/2; box.vy *= -cfg.bounce; }
-    if (box.y - box.height/2 < 0 && !checkBoundaryBypass(box, box.x, 0, size)){ box.y = box.height/2; box.vy *= -cfg.bounce; }
-    if (box.x + box.width/2 > canvas.width && !checkBoundaryBypass(box, canvas.width, box.y, size)){ box.x = canvas.width - box.width/2; box.vx *= -cfg.bounce; }
-    if (box.x - box.width/2 < 0 && !checkBoundaryBypass(box, 0, box.y, size)){ box.x = box.width/2; box.vx *= -cfg.bounce; }
-  }
-
-  // collision passes
-  for (let pass = 0; pass < 2; pass++){
-    const participants = [];
-    for (let b of balls){ participants.push({isBox:false,isClone:false,parent:b,x:b.x,y:b.y,vx:b.vx,vy:b.vy,radius:b.radius}); const c = getCloneFrame(b,false); if (c) participants.push({isBox:false,isClone:true,parent:b,x:c.x,y:c.y,vx:c.vx,vy:c.vy,radius:c.radius,type:c.type}); }
-    for (let box of physicsBoxes){ participants.push({isBox:true,isClone:false,parent:box,x:box.x,y:box.y,vx:box.vx,vy:box.vy,width:box.width,height:box.height}); const c=getCloneFrame(box,true); if (c) participants.push({isBox:true,isClone:true,parent:box,x:c.x,y:c.y,vx:c.vx,vy:c.vy,width:c.width,height:c.height,type:c.type}); }
-
-    for (let i=0;i<participants.length;i++){
-      for (let j=i+1;j<participants.length;j++){
-        const p1 = participants[i], p2 = participants[j];
-        if (!p1.isBox && !p2.isBox) resolveBallBallCollision(p1,p2);
-        else if (p1.isBox && p2.isBox) resolveBoxBoxCollision(p1,p2);
-        else {
-          const ballObj = p1.isBox ? p2 : p1; const boxObj = p1.isBox ? p1 : p2;
-          resolveBallBoxCollision(ballObj, boxObj);
-        }
-      }
-    }
-
-    for (let p of participants){
-      for (let ob of obstacleBoxes){
-        if (p.isBox) resolveBoxBoxCollision(p, { x:ob.x, y:ob.y, width:ob.width, height:ob.height, vx:0, vy:0, isStatic:true });
-        else resolveBallBoxCollision(p, { x:ob.x, y:ob.y, width:ob.width, height:ob.height, isStatic:true });
-      }
-    }
-  }
-}
-
-/* ---------- Helpers that existed earlier ---------- */
+/* ---------- helper functions used by drawing ---------- */
 
 function checkBoundaryBypass(entity, borderX, borderY, size){
   const locA = getLocalCoordsWithTransform({x:borderX,y:borderY}, portalA.x, portalA.y, portalA.angle);
@@ -531,10 +366,9 @@ function getCloneFrame(entity, isBox=false){
   }
   return null;
 }
-
 function isInsidePortalZone(u,v,size,portalLength){ return Math.abs(u) <= size && Math.abs(v) <= portalLength/2; }
 
-/* ---------- Rendering (with blanch / flash) ---------- */
+/* ---------- drawing ---------- */
 
 function drawSeeThroughWindow(portal, target){
   ctx.save();
@@ -545,7 +379,6 @@ function drawSeeThroughWindow(portal, target){
   ctx.closePath();
   ctx.clip();
 
-  // darken remote view area
   ctx.setTransform(1,0,0,1,0,0);
   ctx.fillStyle = '#05070c'; ctx.fill();
 
@@ -553,7 +386,7 @@ function drawSeeThroughWindow(portal, target){
   ctx.rotate(portal.angle);
 
   const baseScale = portal.length / target.length;
-  const warp = portal._warp || 0;
+  const warp = (intrusionEnabled ? portal._warp || 0 : 0);
   const scaleX = baseScale * (1 + warp);
   const scaleY = baseScale;
 
@@ -562,12 +395,10 @@ function drawSeeThroughWindow(portal, target){
   ctx.rotate(-target.angle);
   ctx.translate(-target.x, -target.y);
 
-  // grid in remote space
   ctx.strokeStyle = 'rgba(45,55,72,0.35)'; ctx.lineWidth = 1;
   for (let x=0;x<canvas.width;x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
   for (let y=0;y<canvas.height;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
 
-  // draw remote scene
   for (let ob of obstacleBoxes){ ctx.fillStyle = ob.color; ctx.fillRect(ob.x - ob.width/2, ob.y - ob.height/2, ob.width, ob.height); }
   for (let box of physicsBoxes) drawPhysicsBoxShape(box.x, box.y, box.width, box.height, box.color, false, box.flash);
   for (let b of balls) drawBallShape(b.x, b.y, b.radius, b.color, false, b.flash);
@@ -577,12 +408,13 @@ function drawSeeThroughWindow(portal, target){
 
 function drawPortalRim(portal){
   ctx.save(); ctx.translate(portal.x, portal.y); ctx.rotate(portal.angle);
-  const warp = portal._warp || 0;
+  const warp = (intrusionEnabled ? portal._warp || 0 : 0);
   const glow = 8 + warp * 30;
   const strokeW = 4 + warp * 3;
   ctx.shadowColor = portal.color; ctx.shadowBlur = glow;
   ctx.strokeStyle = portal.color; ctx.lineWidth = strokeW;
   ctx.beginPath(); ctx.moveTo(0, -portal.length/2); ctx.lineTo(0, portal.length/2); ctx.stroke();
+
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.shadowBlur = 0;
   const cycle = Date.now()*0.008;
   for (let pos = -portal.length/2 + 10; pos <= portal.length/2 - 10; pos += 14){
@@ -593,48 +425,94 @@ function drawPortalRim(portal){
 }
 
 function drawBallShape(x,y,r,color,active=false, flash=0){
-  ctx.save();
-  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.save(); ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
   const grad = ctx.createRadialGradient(x - r*0.3, y - r*0.3, r*0.05, x, y, r);
   grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.3, color); grad.addColorStop(1, '#050a15');
   ctx.fillStyle = grad;
-  if (active){ ctx.shadowColor = '#fff'; ctx.shadowBlur = 14; ctx.strokeStyle = '#fff'; ctx.stroke(); }
-  else { ctx.shadowColor = color; ctx.shadowBlur = 6; }
+  if (active){ ctx.shadowColor = '#fff'; ctx.shadowBlur = 14; ctx.strokeStyle = '#fff'; ctx.stroke(); } else { ctx.shadowColor = color; ctx.shadowBlur = 6; }
   ctx.fill();
-
-  if (flash && flash > 0.02){
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle = `rgba(255,255,255,${Math.min(0.9, flash)})`;
-    ctx.beginPath(); ctx.arc(x,y,r+1,0,Math.PI*2); ctx.fill();
-    ctx.globalCompositeOperation = 'source-over';
-  }
+  if (flash && flash > 0.02){ ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,255,255,${Math.min(0.9,flash)})`; ctx.beginPath(); ctx.arc(x,y,r+1,0,Math.PI*2); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
   ctx.restore();
 }
 
 function drawPhysicsBoxShape(x,y,w,h,color,active=false, flash=0){
   ctx.save();
-  ctx.fillStyle = color;
-  ctx.fillRect(x-w/2, y-h/2, w, h);
+  ctx.fillStyle = color; ctx.fillRect(x-w/2, y-h/2, w, h);
   ctx.strokeStyle = 'rgba(15,17,21,0.4)'; ctx.lineWidth = 2; ctx.strokeRect(x-w/2+3, y-h/2+3, w-6, h-6);
   ctx.beginPath(); ctx.moveTo(x-w/2+4, y-h/2+4); ctx.lineTo(x+w/2-4, y+h/2-4); ctx.moveTo(x+w/2-4, y-h/2+4); ctx.lineTo(x-w/2+4, y+h/2-4); ctx.stroke();
   ctx.strokeStyle = active ? '#fff' : color; ctx.lineWidth = 1.5; ctx.shadowColor = color; ctx.shadowBlur = active ? 12 : 6; ctx.strokeRect(x-w/2, y-h/2, w, h);
-  if (flash && flash > 0.02){
-    ctx.fillStyle = `rgba(255,255,255,${Math.min(0.8, flash)})`;
-    ctx.fillRect(x-w/2, y-h/2, w, h);
-  }
+  if (flash && flash > 0.02){ ctx.fillStyle = `rgba(255,255,255,${Math.min(0.8, flash)})`; ctx.fillRect(x-w/2, y-h/2, w, h); }
   ctx.restore();
 }
 
-/* ---------- Main draw loop ---------- */
+/* ---------- update + draw loop ---------- */
+
+function update(){
+  // update warps (applies only if intrusionEnabled)
+  computePortalWarp(portalA);
+  computePortalWarp(portalB);
+
+  // balls physics
+  for (let b of balls){
+    if (b === dragged && dragMode === 'ball_drag'){ processInterception(b,false); continue; }
+    if (b.cooldown > 0) b.cooldown--;
+    b.vy += cfg.gravity;
+    b.vx *= cfg.friction; b.vy *= cfg.friction;
+    b.x += b.vx; b.y += b.vy;
+    processInterception(b,false);
+    if (b.flash) b.flash = Math.max(0, b.flash - 0.08);
+
+    if (b.y + b.radius > canvas.height && !checkBoundaryBypass(b, b.x, canvas.height, b.radius)){ b.y = canvas.height - b.radius; b.vy *= -cfg.bounce; }
+    if (b.y - b.radius < 0 && !checkBoundaryBypass(b, b.x, 0, b.radius)){ b.y = b.radius; b.vy *= -cfg.bounce; }
+    if (b.x + b.radius > canvas.width && !checkBoundaryBypass(b, canvas.width, b.y, b.radius)){ b.x = canvas.width - b.radius; b.vx *= -cfg.bounce; }
+    if (b.x - b.radius < 0 && !checkBoundaryBypass(b, 0, b.y, b.radius)){ b.x = b.radius; b.vx *= -cfg.bounce; }
+  }
+
+  // boxes physics
+  for (let box of physicsBoxes){
+    if (box === selectedBox && dragMode === 'box_move'){ processInterception(box,true); continue; }
+    if (box.cooldown > 0) box.cooldown--;
+    box.vy += cfg.gravity;
+    box.vx *= cfg.friction; box.vy *= cfg.friction;
+    box.x += box.vx; box.y += box.vy;
+    processInterception(box,true);
+    if (box.flash) box.flash = Math.max(0, box.flash - 0.08);
+    const size = Math.max(box.width, box.height)/2;
+    if (box.y + box.height/2 > canvas.height && !checkBoundaryBypass(box, box.x, canvas.height, size)){ box.y = canvas.height - box.height/2; box.vy *= -cfg.bounce; }
+    if (box.y - box.height/2 < 0 && !checkBoundaryBypass(box, box.x, 0, size)){ box.y = box.height/2; box.vy *= -cfg.bounce; }
+    if (box.x + box.width/2 > canvas.width && !checkBoundaryBypass(box, canvas.width, box.y, size)){ box.x = canvas.width - box.width/2; box.vx *= -cfg.bounce; }
+    if (box.x - box.width/2 < 0 && !checkBoundaryBypass(box, 0, box.y, size)){ box.x = box.width/2; box.vx *= -cfg.bounce; }
+  }
+
+  // collision passes
+  for (let pass=0; pass<2; pass++){
+    let participants = [];
+    for (let b of balls){ participants.push({ isBox:false, isClone:false, parent:b, x:b.x, y:b.y, vx:b.vx, vy:b.vy, radius:b.radius }); const c=getCloneFrame(b,false); if (c) participants.push({ isBox:false, isClone:true, parent:b, x:c.x, y:c.y, vx:c.vx, vy:c.vy, radius:c.radius, type:c.type }); }
+    for (let box of physicsBoxes){ participants.push({ isBox:true, isClone:false, parent:box, x:box.x, y:box.y, vx:box.vx, vy:box.vy, width:box.width, height:box.height }); const c=getCloneFrame(box,true); if (c) participants.push({ isBox:true, isClone:true, parent:box, x:c.x, y:c.y, vx:c.vx, vy:c.vy, width:c.width, height:c.height, type:c.type }); }
+    for (let i=0;i<participants.length;i++){
+      for (let j=i+1;j<participants.length;j++){
+        const p1 = participants[i], p2 = participants[j];
+        if (!p1.isBox && !p2.isBox) resolveBallBallCollision(p1,p2);
+        else if (p1.isBox && p2.isBox) resolveBoxBoxCollision(p1,p2);
+        else { const ballObj = p1.isBox ? p2 : p1; const boxObj = p1.isBox ? p1 : p2; resolveBallBoxCollision(ballObj, boxObj); }
+      }
+    }
+    for (let p of participants){
+      for (let ob of obstacleBoxes){
+        if (p.isBox) resolveBoxBoxCollision(p, { x:ob.x, y:ob.y, width:ob.width, height:ob.height, vx:0, vy:0, isStatic:true });
+        else resolveBallBoxCollision(p, { x:ob.x, y:ob.y, width:ob.width, height:ob.height, isStatic:true });
+      }
+    }
+  }
+}
 
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  // background grid
   ctx.strokeStyle = 'rgba(45,55,72,0.2)'; ctx.lineWidth = 1;
   for (let x=0;x<canvas.width;x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
   for (let y=0;y<canvas.height;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
 
-  // see-through portal views (with warp)
+  // draw see-through portal views (warp applied only when intrusionEnabled)
   drawSeeThroughWindow(portalA, portalB);
   drawSeeThroughWindow(portalB, portalA);
 
@@ -696,7 +574,6 @@ function draw(){
 }
 
 function applyPortalClip(portal){
-  // a simplified half-plane clip around the portal
   ctx.beginPath();
   const span = 4000;
   const tx = -Math.sin(portal.angle), ty = Math.cos(portal.angle);
@@ -709,7 +586,7 @@ function applyPortalClip(portal){
   ctx.clip();
 }
 
-/* ---------- animation ---------- */
+/* ---------- main loop ---------- */
 
 function loop(){
   update();
